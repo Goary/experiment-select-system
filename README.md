@@ -19,12 +19,26 @@ docs/       设计文档
 
 ## 快速启动
 
+### 数据库（MySQL 8，系统服务）
+
+```bash
+# 安装（Ubuntu）
+sudo apt update && sudo apt install -y mysql-server
+
+# 设置 root 密码为 root（与 application.yml 一致）
+sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY 'root'; FLUSH PRIVILEGES;"
+
+# 初始化数据库与表（首次）
+mysql -h127.0.0.1 -uroot -proot < backend/src/main/resources/schema.sql
+
+# 服务管理
+sudo systemctl start mysql    # 启动
+sudo systemctl stop mysql     # 停止
+```
+
 ### 后端
 
 ```bash
-# 准备 MySQL，创建数据库
-mysql -uroot -p -e "CREATE DATABASE lab_select DEFAULT CHARSET utf8mb4;"
-mysql -uroot -p lab_select < backend/src/main/resources/schema.sql
 
 # 修改 backend/src/main/resources/application.yml 中的数据源账号密码后启动
 cd backend && mvn spring-boot:run
