@@ -98,7 +98,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 -- 初始数据：超管账号 admin / admin123（BCrypt）
 INSERT INTO sys_user (username, password, real_name, role)
-VALUES ('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa', '系统管理员', 'admin');
+VALUES ('admin', '$2a$10$Licad57LDxBcx/EK3.4Ji.nSDixZQkoUb9LPRUSzJlQWZaHQPA7lq', '系统管理员', 'admin');
 
 -- 示例教室
 INSERT INTO classroom (name, location, capacity) VALUES

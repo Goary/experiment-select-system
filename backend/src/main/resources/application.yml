@@ -5,7 +5,7 @@ spring:
   application:
     name: lab-select
   datasource:
-    url: jdbc:mysql://localhost:3306/lab_select?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/lab_select?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
