@@ -236,6 +236,7 @@ public class BatchController {
         List<Long> teacherIds = batchTeacherMapper.selectList(
                         new LambdaQueryWrapper<BatchTeacher>().eq(BatchTeacher::getBatchId, batch.getId()))
                 .stream().map(BatchTeacher::getTeacherId).collect(Collectors.toList());
+        vo.setTeacherIds(teacherIds);
         vo.setTeacherNames(teacherIds.isEmpty() ? List.of()
                 : sysUserMapper.selectBatchIds(teacherIds).stream().map(SysUser::getRealName).collect(Collectors.toList()));
         vo.setRemaining(batch.getCapacity() - batch.getSelectedCount());

@@ -12,6 +12,7 @@ public class BatchVO extends CourseBatch {
 
     private String classroomName;
     private String classroomLocation;
+    private List<Long> teacherIds;
     private List<String> teacherNames;
     private Integer remaining;
 }
