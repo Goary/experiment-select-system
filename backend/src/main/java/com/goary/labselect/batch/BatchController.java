@@ -4,8 +4,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.goary.labselect.auth.UserContext;
+import com.goary.labselect.batch.entity.BatchSession;
 import com.goary.labselect.batch.entity.BatchTeacher;
 import com.goary.labselect.batch.entity.CourseBatch;
+import com.goary.labselect.batch.mapper.BatchSessionMapper;
 import com.goary.labselect.batch.mapper.BatchTeacherMapper;
 import com.goary.labselect.batch.mapper.CourseBatchMapper;
 import com.goary.labselect.classroom.entity.Classroom;
@@ -26,6 +28,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -50,6 +53,7 @@ public class BatchController {
     private final CourseMapper courseMapper;
     private final CourseBatchMapper batchMapper;
     private final BatchTeacherMapper batchTeacherMapper;
+    private final BatchSessionMapper batchSessionMapper;
     private final ClassroomMapper classroomMapper;
     private final SysUserMapper sysUserMapper;
     private final CourseSelectionMapper selectionMapper;
@@ -63,8 +67,9 @@ public class BatchController {
         return Result.ok(batches.stream().map(this::toVO).collect(Collectors.toList()));
     }
 
-    @Operation(summary = "创建批次（容量取教室容量）")
+    @Operation(summary = "创建批次（含多个课次，容量取教室容量）")
     @PostMapping("/batches")
+    @Transactional
     public Result<Void> create(@Valid @RequestBody BatchForm form) {
         Course course = mustOwnCourse(form.getCourseId());
         if (!"published".equals(course.getStatus())) {
@@ -78,11 +83,13 @@ public class BatchController {
         batch.setStatus("draft");
         batchMapper.insert(batch);
         saveTeachers(batch.getId(), form.getTeacherIds());
+        saveSessions(batch.getId(), form.getSessions());
         return Result.ok();
     }
 
-    @Operation(summary = "编辑批次（仅草稿）")
+    @Operation(summary = "编辑批次及课次（仅草稿）")
     @PutMapping("/batches/{id}")
+    @Transactional
     public Result<Void> update(@PathVariable Long id, @Valid @RequestBody BatchForm form) {
         CourseBatch batch = mustOwnBatch(id);
         if (!"draft".equals(batch.getStatus())) {
@@ -92,6 +99,7 @@ public class BatchController {
         applyAndCheck(batch, form);
         batchMapper.updateById(batch);
         saveTeachers(id, form.getTeacherIds());
+        saveSessions(id, form.getSessions());
         return Result.ok();
     }
 
@@ -131,13 +139,15 @@ public class BatchController {
 
     @Operation(summary = "删除批次（仅草稿）")
     @DeleteMapping("/batches/{id}")
+    @Transactional
     public Result<Void> delete(@PathVariable Long id) {
         CourseBatch batch = mustOwnBatch(id);
         if (!"draft".equals(batch.getStatus())) {
             throw new BizException("仅草稿状态的批次可删除");
         }
         batchMapper.deleteById(id);
-        batchTeacherMapper.delete(new LambdaQueryWrapper<BatchTeacher>().eq(BatchTeacher::getBatchId, id));
+        batchTeacherMapper.physicalDeleteByBatchId(id);
+        batchSessionMapper.physicalDeleteByBatchId(id);
         return Result.ok();
     }
 
@@ -166,44 +176,75 @@ public class BatchController {
     }
 
     private void applyAndCheck(CourseBatch batch, BatchForm form) {
-        if (!form.getEndTime().isAfter(form.getStartTime())) {
-            throw new BizException("结束时间必须晚于开始时间");
-        }
         Classroom classroom = classroomMapper.selectById(form.getClassroomId());
         if (classroom == null || classroom.getStatus() != 1) {
             throw new BizException("教室不存在或已停用");
         }
+        validateTeachers(form.getTeacherIds());
         batch.setCourseId(form.getCourseId());
         batch.setBatchNo(form.getBatchNo());
         batch.setClassroomId(form.getClassroomId());
-        batch.setStartTime(form.getStartTime());
-        batch.setEndTime(form.getEndTime());
-        // 容量固定取教室容量
         batch.setCapacity(classroom.getCapacity());
-        // 教室时间冲突校验
-        Long conflicts = batchMapper.selectCount(new LambdaQueryWrapper<CourseBatch>()
-                .eq(CourseBatch::getClassroomId, form.getClassroomId())
-                .ne(batch.getId() != null, CourseBatch::getId, batch.getId())
-                .ne(CourseBatch::getStatus, "closed")
-                .lt(CourseBatch::getStartTime, form.getEndTime())
-                .gt(CourseBatch::getEndTime, form.getStartTime()));
-        if (conflicts > 0) {
-            throw new BizException("该教室在此时间段已有其他批次，请更换教室或时间");
+
+        List<SessionForm> sessions = sortedSessions(form.getSessions());
+        for (int i = 0; i < sessions.size(); i++) {
+            SessionForm session = sessions.get(i);
+            if (!session.getEndTime().isAfter(session.getStartTime())) {
+                throw new BizException("第" + (i + 1) + "个课次的结束时间必须晚于开始时间");
+            }
+            if (i > 0 && sessions.get(i - 1).getEndTime().isAfter(session.getStartTime())) {
+                throw new BizException("同一批次内的课次时间不能重叠");
+            }
+            long classroomConflicts = batchSessionMapper.countClassroomConflict(
+                    form.getClassroomId(), batch.getId(), session.getStartTime(), session.getEndTime());
+            if (classroomConflicts > 0) {
+                throw new BizException("第" + (i + 1) + "个课次的教室时间与其他批次冲突");
+            }
+            long teacherConflicts = batchSessionMapper.countTeacherConflict(
+                    form.getTeacherIds(), batch.getId(), session.getStartTime(), session.getEndTime());
+            if (teacherConflicts > 0) {
+                throw new BizException("第" + (i + 1) + "个课次的授课教师时间与其他批次冲突");
+            }
         }
     }
 
-    private void saveTeachers(Long batchId, List<Long> teacherIds) {
-        batchTeacherMapper.delete(new LambdaQueryWrapper<BatchTeacher>().eq(BatchTeacher::getBatchId, batchId));
+    private void validateTeachers(List<Long> teacherIds) {
         for (Long teacherId : teacherIds.stream().distinct().collect(Collectors.toList())) {
             SysUser teacher = sysUserMapper.selectById(teacherId);
             if (teacher == null || !"teacher".equals(teacher.getRole())) {
                 throw new BizException("授课教师不存在：" + teacherId);
             }
+        }
+    }
+
+    private void saveTeachers(Long batchId, List<Long> teacherIds) {
+        batchTeacherMapper.physicalDeleteByBatchId(batchId);
+        for (Long teacherId : teacherIds.stream().distinct().collect(Collectors.toList())) {
             BatchTeacher bt = new BatchTeacher();
             bt.setBatchId(batchId);
             bt.setTeacherId(teacherId);
             batchTeacherMapper.insert(bt);
         }
+    }
+
+    private void saveSessions(Long batchId, List<SessionForm> sessionForms) {
+        batchSessionMapper.physicalDeleteByBatchId(batchId);
+        List<SessionForm> sessionFormsSorted = sortedSessions(sessionForms);
+        for (int i = 0; i < sessionFormsSorted.size(); i++) {
+            SessionForm sessionForm = sessionFormsSorted.get(i);
+            BatchSession session = new BatchSession();
+            session.setBatchId(batchId);
+            session.setSessionNo(i + 1);
+            session.setStartTime(sessionForm.getStartTime());
+            session.setEndTime(sessionForm.getEndTime());
+            batchSessionMapper.insert(session);
+        }
+    }
+
+    private List<SessionForm> sortedSessions(List<SessionForm> sessions) {
+        return sessions.stream()
+                .sorted((a, b) -> a.getStartTime().compareTo(b.getStartTime()))
+                .collect(Collectors.toList());
     }
 
     private void checkBatchNoUnique(Long courseId, String batchNo, Long excludeId) {
@@ -250,6 +291,9 @@ public class BatchController {
         vo.setTeacherIds(teacherIds);
         vo.setTeacherNames(teacherIds.isEmpty() ? List.of()
                 : sysUserMapper.selectBatchIds(teacherIds).stream().map(SysUser::getUsername).collect(Collectors.toList()));
+        vo.setSessions(batchSessionMapper.selectList(new LambdaQueryWrapper<BatchSession>()
+                .eq(BatchSession::getBatchId, batch.getId())
+                .orderByAsc(BatchSession::getSessionNo)));
         vo.setRemaining(batch.getCapacity() - batch.getSelectedCount());
         return vo;
     }
@@ -264,9 +308,15 @@ public class BatchController {
         private Long classroomId;
         @NotEmpty(message = "授课教师不能为空")
         private List<Long> teacherIds;
-        @NotNull(message = "开始时间不能为空")
+        @NotEmpty(message = "至少需要一个课次")
+        private List<@Valid SessionForm> sessions;
+    }
+
+    @Data
+    public static class SessionForm {
+        @NotNull(message = "课次开始时间不能为空")
         private LocalDateTime startTime;
-        @NotNull(message = "结束时间不能为空")
+        @NotNull(message = "课次结束时间不能为空")
         private LocalDateTime endTime;
     }
 }

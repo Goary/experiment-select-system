@@ -18,8 +18,6 @@ public class CourseBatch {
     private Long courseId;
     private String batchNo;
     private Long classroomId;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
     private Integer capacity;
     private Integer selectedCount;
     private Integer selectOpen;

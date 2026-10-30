@@ -25,13 +25,26 @@
         </el-button>
       </div>
       <el-table :data="batches" v-loading="loading" stripe>
+        <el-table-column type="expand">
+          <template #default="{ row }">
+            <div class="session-expand">
+              <div v-for="session in row.sessions" :key="session.id" class="session-line">
+                <el-tag size="small" effect="plain">第{{ session.sessionNo }}次</el-tag>
+                <span>{{ fmt(session.startTime) }} ~ {{ fmt(session.endTime).slice(11) }}</span>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="batchNo" label="批次" width="90" />
         <el-table-column prop="classroomName" label="教室" width="130" />
         <el-table-column label="授课教师" min-width="120">
           <template #default="{ row }">{{ row.teacherNames?.join('、') }}</template>
         </el-table-column>
-        <el-table-column label="上课时间" width="270">
-          <template #default="{ row }">{{ fmt(row.startTime) }} ~ {{ fmt(row.endTime).slice(11) }}</template>
+        <el-table-column label="上课课次" width="190">
+          <template #default="{ row }">
+            <div>共 {{ row.sessions?.length || 0 }} 次</div>
+            <div class="secondary">{{ fmt(row.sessions?.[0]?.startTime) }} 起</div>
+          </template>
         </el-table-column>
         <el-table-column label="名额" width="110">
           <template #default="{ row }">{{ row.selectedCount }} / {{ row.capacity }}</template>
@@ -55,7 +68,7 @@
       </el-table>
     </el-card>
 
-    <el-dialog v-model="dialog" :title="form.id ? '编辑批次' : '创建批次'" width="520px">
+    <el-dialog v-model="dialog" :title="form.id ? '编辑批次' : '创建批次'" width="720px">
       <el-form :model="form" :rules="formRules" ref="formRef" label-width="100px">
         <el-form-item label="批次号" prop="batchNo">
           <el-input v-model="form.batchNo" placeholder="如：第1批" />
@@ -73,15 +86,23 @@
             <el-option v-for="t in teachers" :key="t.id" :value="t.id" :label="`${t.username}（${t.employeeNo}）`" />
           </el-select>
         </el-form-item>
-        <el-form-item label="上课时间" prop="timeRange">
-          <el-date-picker
-            v-model="form.timeRange"
-            type="datetimerange"
-            range-separator="至"
-            start-placeholder="开始时间"
-            end-placeholder="结束时间"
-            value-format="YYYY-MM-DDTHH:mm:ss"
-            style="width: 100%" />
+        <el-form-item label="上课课次" required>
+          <div class="session-editor">
+            <div v-for="(session, index) in form.sessions" :key="index" class="session-row">
+              <span class="session-label">第{{ index + 1 }}次</span>
+              <el-date-picker
+                v-model="session.timeRange"
+                type="datetimerange"
+                range-separator="至"
+                start-placeholder="开始时间"
+                end-placeholder="结束时间"
+                value-format="YYYY-MM-DDTHH:mm:ss"
+                class="session-picker" />
+              <el-button link type="danger" :disabled="form.sessions.length === 1" @click="removeSession(index)">删除</el-button>
+            </div>
+            <el-button type="primary" plain @click="addSession">+ 添加课次</el-button>
+            <div class="form-tip">学生选择批次后需参加全部课次，各课次共用以上教室和教师。</div>
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -127,12 +148,12 @@ const studentDialog = ref(false)
 const students = ref([])
 const currentBatch = ref(null)
 const formRef = ref()
-const form = reactive({ id: null, batchNo: '', classroomId: null, teacherIds: [], timeRange: [] })
+const emptySession = () => ({ timeRange: [] })
+const form = reactive({ id: null, batchNo: '', classroomId: null, teacherIds: [], sessions: [emptySession()] })
 const formRules = {
   batchNo: [{ required: true, message: '请输入批次号', trigger: 'blur' }],
   classroomId: [{ required: true, message: '请选择教室', trigger: 'change' }],
-  teacherIds: [{ required: true, type: 'array', min: 1, message: '请选择授课教师', trigger: 'change' }],
-  timeRange: [{ required: true, type: 'array', len: 2, message: '请选择上课时间', trigger: 'change' }]
+  teacherIds: [{ required: true, type: 'array', min: 1, message: '请选择授课教师', trigger: 'change' }]
 }
 
 const selectedCapacity = computed(() => classrooms.value.find(c => c.id === form.classroomId)?.capacity)
@@ -172,14 +193,39 @@ async function openForm(row) {
         batchNo: row.batchNo,
         classroomId: row.classroomId,
         teacherIds: row.teacherIds || [],
-        timeRange: [row.startTime, row.endTime]
+        sessions: row.sessions.map(s => ({ timeRange: [s.startTime, s.endTime] }))
       }
-    : { id: null, batchNo: `第${batches.value.length + 1}批`, classroomId: null, teacherIds: [store.user.id], timeRange: [] })
+    : {
+        id: null,
+        batchNo: `第${batches.value.length + 1}批`,
+        classroomId: null,
+        teacherIds: [store.user.id],
+        sessions: [emptySession()]
+      })
   dialog.value = true
+}
+
+function addSession() {
+  form.sessions.push(emptySession())
+}
+
+function removeSession(index) {
+  form.sessions.splice(index, 1)
 }
 
 async function onSave() {
   await formRef.value.validate()
+  for (let i = 0; i < form.sessions.length; i++) {
+    const range = form.sessions[i].timeRange
+    if (!range || range.length !== 2) {
+      ElMessage.warning(`请选择第${i + 1}个课次的起止时间`)
+      return
+    }
+    if (range[1] <= range[0]) {
+      ElMessage.warning(`第${i + 1}个课次的结束时间必须晚于开始时间`)
+      return
+    }
+  }
   saving.value = true
   try {
     const payload = {
@@ -187,8 +233,7 @@ async function onSave() {
       batchNo: form.batchNo,
       classroomId: form.classroomId,
       teacherIds: form.teacherIds,
-      startTime: form.timeRange[0],
-      endTime: form.timeRange[1]
+      sessions: form.sessions.map(s => ({ startTime: s.timeRange[0], endTime: s.timeRange[1] }))
     }
     if (form.id) {
       await updateBatch(form.id, payload)
@@ -246,4 +291,12 @@ onMounted(load)
 .card-header .title { font-size: 16px; font-weight: 600; }
 .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .section-title { font-weight: 600; }
+.secondary { margin-top: 4px; color: #909399; font-size: 12px; }
+.session-expand { padding: 4px 24px; }
+.session-line { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
+.session-editor { width: 100%; }
+.session-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.session-label { flex: 0 0 48px; color: #606266; }
+.session-picker { flex: 1; min-width: 0; }
+.form-tip { margin-top: 8px; color: #909399; font-size: 12px; line-height: 1.6; }
 </style>

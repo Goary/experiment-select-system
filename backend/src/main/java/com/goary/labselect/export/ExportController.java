@@ -5,8 +5,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.goary.labselect.auth.UserContext;
+import com.goary.labselect.batch.entity.BatchSession;
 import com.goary.labselect.batch.entity.BatchTeacher;
 import com.goary.labselect.batch.entity.CourseBatch;
+import com.goary.labselect.batch.mapper.BatchSessionMapper;
 import com.goary.labselect.batch.mapper.BatchTeacherMapper;
 import com.goary.labselect.batch.mapper.CourseBatchMapper;
 import com.goary.labselect.classroom.entity.Classroom;
@@ -46,6 +48,7 @@ public class ExportController {
     private final CourseSelectionMapper selectionMapper;
     private final CourseBatchMapper batchMapper;
     private final BatchTeacherMapper batchTeacherMapper;
+    private final BatchSessionMapper batchSessionMapper;
     private final CourseMapper courseMapper;
     private final ClassroomMapper classroomMapper;
     private final SysUserMapper sysUserMapper;
@@ -104,6 +107,11 @@ public class ExportController {
         Map<Long, Classroom> classroomMap = classroomMapper.selectBatchIds(
                         batches.stream().map(CourseBatch::getClassroomId).distinct().collect(Collectors.toList()))
                 .stream().collect(Collectors.toMap(Classroom::getId, c -> c));
+        Map<Long, List<BatchSession>> sessionMap = batchSessionMapper.selectList(
+                        new LambdaQueryWrapper<BatchSession>()
+                                .in(BatchSession::getBatchId, batchIds)
+                                .orderByAsc(BatchSession::getSessionNo))
+                .stream().collect(Collectors.groupingBy(BatchSession::getBatchId));
 
         List<CourseSelection> selections = selectionMapper.selectList(new LambdaQueryWrapper<CourseSelection>()
                 .in(CourseSelection::getBatchId, batchIds)
@@ -130,7 +138,10 @@ public class ExportController {
             row.setCourseName(c == null ? "" : c.getName());
             row.setBatchNo(b.getBatchNo());
             row.setClassroomName(room == null ? "" : room.getName());
-            row.setTimeRange(b.getStartTime().format(FMT) + " ~ " + b.getEndTime().format(FMT));
+            row.setTimeRange(sessionMap.getOrDefault(b.getId(), List.of()).stream()
+                    .map(session -> "第" + session.getSessionNo() + "次："
+                            + session.getStartTime().format(FMT) + " ~ " + session.getEndTime().format(FMT))
+                    .collect(Collectors.joining("\n")));
             row.setSelectTime(s.getSelectTime().format(FMT));
             return row;
         }).collect(Collectors.toList());

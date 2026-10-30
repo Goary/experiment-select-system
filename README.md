@@ -28,8 +28,11 @@ sudo apt update && sudo apt install -y mysql-server
 # 设置 root 密码为 root（与 application.yml 一致）
 sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY 'root'; FLUSH PRIVILEGES;"
 
-# 初始化数据库与表（首次）
+# 初始化数据库与表（首次，会重建表）
 mysql -h127.0.0.1 -uroot -proot < backend/src/main/resources/schema.sql
+
+# 旧版本升级：单次时间批次迁移为多课次（已有数据库仅执行一次，不清空业务数据）
+mysql -h127.0.0.1 -uroot -proot < backend/src/main/resources/migration/20261030_add_batch_session.sql
 
 # 服务管理
 sudo systemctl start mysql    # 启动

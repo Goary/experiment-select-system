@@ -55,8 +55,6 @@ CREATE TABLE course_batch (
     course_id      BIGINT      NOT NULL COMMENT '所属课程',
     batch_no       VARCHAR(32) NOT NULL COMMENT '批次号，如 第1批',
     classroom_id   BIGINT      NOT NULL COMMENT '上课教室',
-    start_time     DATETIME    NOT NULL COMMENT '上课开始时间',
-    end_time       DATETIME    NOT NULL COMMENT '上课结束时间',
     capacity       INT         NOT NULL COMMENT '批次容量（取教室容量快照）',
     selected_count INT         NOT NULL DEFAULT 0 COMMENT '已选人数',
     select_open    TINYINT     NOT NULL DEFAULT 0 COMMENT '1开放选课 0关闭',
@@ -65,8 +63,23 @@ CREATE TABLE course_batch (
     create_time    DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time    DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_course_batch (course_id, batch_no),
-    KEY idx_classroom_time (classroom_id, start_time, end_time)
+    KEY idx_classroom (classroom_id)
 ) ENGINE = InnoDB COMMENT '课程批次';
+
+DROP TABLE IF EXISTS batch_session;
+CREATE TABLE batch_session (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    batch_id    BIGINT   NOT NULL COMMENT '所属批次 id',
+    session_no  INT      NOT NULL COMMENT '课次序号，从1开始',
+    start_time  DATETIME NOT NULL COMMENT '本次上课开始时间',
+    end_time    DATETIME NOT NULL COMMENT '本次上课结束时间',
+    deleted     TINYINT  NOT NULL DEFAULT 0,
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_batch_session (batch_id, session_no),
+    KEY idx_batch_time (batch_id, start_time, end_time),
+    KEY idx_session_time (start_time, end_time)
+) ENGINE = InnoDB COMMENT '批次课次安排';
 
 DROP TABLE IF EXISTS batch_teacher;
 CREATE TABLE batch_teacher (

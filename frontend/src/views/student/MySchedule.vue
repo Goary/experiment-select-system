@@ -7,6 +7,9 @@
         <el-table-column prop="courseName" label="课程名称" min-width="150" />
         <el-table-column prop="courseCode" label="课程编号" width="110" />
         <el-table-column prop="batchNo" label="批次" width="90" />
+        <el-table-column label="课次" width="70">
+          <template #default="{ row }">第{{ row.sessionNo }}次</template>
+        </el-table-column>
         <el-table-column prop="classroomName" label="教室" width="130" />
         <el-table-column label="授课教师" min-width="110">
           <template #default="{ row }">{{ row.teacherNames?.join('、') }}</template>
@@ -53,7 +56,7 @@ async function load() {
 }
 
 async function onDrop(row) {
-  await ElMessageBox.confirm(`确定退选「${row.courseName} - ${row.batchNo}」吗？`, '退选', { type: 'warning' })
+  await ElMessageBox.confirm(`确定退选「${row.courseName} - ${row.batchNo}」的全部课次吗？`, '退选', { type: 'warning' })
   await dropSelection(row.selectionId)
   ElMessage.success('已退选')
   load()

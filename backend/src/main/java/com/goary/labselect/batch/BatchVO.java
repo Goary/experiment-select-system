@@ -1,5 +1,6 @@
 package com.goary.labselect.batch;
 
+import com.goary.labselect.batch.entity.BatchSession;
 import com.goary.labselect.batch.entity.CourseBatch;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -14,5 +15,6 @@ public class BatchVO extends CourseBatch {
     private String classroomLocation;
     private List<Long> teacherIds;
     private List<String> teacherNames;
+    private List<BatchSession> sessions;
     private Integer remaining;
 }

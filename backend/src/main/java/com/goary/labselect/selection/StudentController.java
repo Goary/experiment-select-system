@@ -5,8 +5,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.goary.labselect.auth.UserContext;
 import com.goary.labselect.batch.BatchVO;
+import com.goary.labselect.batch.entity.BatchSession;
 import com.goary.labselect.batch.entity.BatchTeacher;
 import com.goary.labselect.batch.entity.CourseBatch;
+import com.goary.labselect.batch.mapper.BatchSessionMapper;
 import com.goary.labselect.batch.mapper.BatchTeacherMapper;
 import com.goary.labselect.batch.mapper.CourseBatchMapper;
 import com.goary.labselect.classroom.entity.Classroom;
@@ -29,6 +31,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -43,6 +47,7 @@ public class StudentController {
     private final CourseMapper courseMapper;
     private final CourseBatchMapper batchMapper;
     private final BatchTeacherMapper batchTeacherMapper;
+    private final BatchSessionMapper batchSessionMapper;
     private final ClassroomMapper classroomMapper;
     private final SysUserMapper sysUserMapper;
     private final CourseSelectionMapper selectionMapper;
@@ -53,7 +58,7 @@ public class StudentController {
         List<CourseBatch> openBatches = batchMapper.selectList(new LambdaQueryWrapper<CourseBatch>()
                 .eq(CourseBatch::getSelectOpen, 1)
                 .eq(CourseBatch::getStatus, "published")
-                .orderByAsc(CourseBatch::getStartTime));
+                .orderByAsc(CourseBatch::getId));
         List<Long> courseIds = openBatches.stream().map(CourseBatch::getCourseId).distinct().collect(Collectors.toList());
         if (courseIds.isEmpty()) {
             return Result.ok(List.of());
@@ -80,6 +85,7 @@ public class StudentController {
         return Result.ok(result);
     }
 
+    @Operation(summary = "选择批次（需参加该批次全部课次）")
     @PostMapping("/select/{batchId}")
     @Transactional
     public Result<Void> select(@PathVariable Long batchId) {
@@ -88,7 +94,6 @@ public class StudentController {
         if (batch == null || !"published".equals(batch.getStatus()) || batch.getSelectOpen() != 1) {
             throw new BizException("该批次未开放选课");
         }
-        // 同一课程只能选中一个批次
         Long exists = selectionMapper.selectCount(new LambdaQueryWrapper<CourseSelection>()
                 .eq(CourseSelection::getStudentId, studentId)
                 .eq(CourseSelection::getCourseId, batch.getCourseId())
@@ -96,19 +101,8 @@ public class StudentController {
         if (exists > 0) {
             throw new BizException("你已选过本课程的其他批次，如需更换请先退选");
         }
-        // 时间段冲突校验
-        List<CourseSelection> mine = selectionMapper.selectList(new LambdaQueryWrapper<CourseSelection>()
-                .eq(CourseSelection::getStudentId, studentId)
-                .eq(CourseSelection::getStatus, "selected"));
-        if (!mine.isEmpty()) {
-            List<Long> batchIds = mine.stream().map(CourseSelection::getBatchId).collect(Collectors.toList());
-            Long conflicts = batchMapper.selectCount(new LambdaQueryWrapper<CourseBatch>()
-                    .in(CourseBatch::getId, batchIds)
-                    .lt(CourseBatch::getStartTime, batch.getEndTime())
-                    .gt(CourseBatch::getEndTime, batch.getStartTime()));
-            if (conflicts > 0) {
-                throw new BizException("该批次时间与你已选课程冲突");
-            }
+        if (batchSessionMapper.countStudentConflict(studentId, batchId) > 0) {
+            throw new BizException("该批次课次与你已选课程冲突");
         }
         // 原子占位，防并发超选
         if (batchMapper.incrSelectedCount(batchId) == 0) {
@@ -123,6 +117,7 @@ public class StudentController {
         return Result.ok();
     }
 
+    @Operation(summary = "退选整个批次")
     @PostMapping("/drop/{selectionId}")
     @Transactional
     public Result<Void> drop(@PathVariable Long selectionId) {
@@ -141,30 +136,41 @@ public class StudentController {
         return Result.ok();
     }
 
-    @Operation(summary = "我的课表")
+    @Operation(summary = "我的课表（按课次展开）")
     @GetMapping("/schedule")
     public Result<List<Map<String, Object>>> schedule() {
         List<CourseSelection> mine = selectionMapper.selectList(new LambdaQueryWrapper<CourseSelection>()
                 .eq(CourseSelection::getStudentId, UserContext.getUserId())
                 .eq(CourseSelection::getStatus, "selected"));
-        List<Map<String, Object>> rows = mine.stream().map(s -> {
-            CourseBatch batch = batchMapper.selectById(s.getBatchId());
-            Course course = courseMapper.selectById(s.getCourseId());
-            Classroom classroom = batch == null ? null : classroomMapper.selectById(batch.getClassroomId());
-            List<String> teachers = batch == null ? List.of() : teacherNames(batch.getId());
-            return Map.<String, Object>of(
-                    "selectionId", s.getId(),
-                    "courseName", course == null ? "" : course.getName(),
-                    "courseCode", course == null ? "" : course.getCourseCode(),
-                    "batchNo", batch == null ? "" : batch.getBatchNo(),
-                    "batchStatus", batch == null ? "" : batch.getStatus(),
-                    "classroomName", classroom == null ? "" : classroom.getName(),
-                    "teacherNames", teachers,
-                    "startTime", batch == null ? "" : batch.getStartTime().toString(),
-                    "endTime", batch == null ? "" : batch.getEndTime().toString(),
-                    "selectTime", s.getSelectTime().toString());
-        }).sorted((a, b) -> ((String) a.get("startTime")).compareTo((String) b.get("startTime")))
-                .collect(Collectors.toList());
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (CourseSelection selection : mine) {
+            CourseBatch batch = batchMapper.selectById(selection.getBatchId());
+            if (batch == null) {
+                continue;
+            }
+            Course course = courseMapper.selectById(selection.getCourseId());
+            Classroom classroom = classroomMapper.selectById(batch.getClassroomId());
+            List<String> teachers = teacherNames(batch.getId());
+            List<BatchSession> sessions = batchSessionMapper.selectList(new LambdaQueryWrapper<BatchSession>()
+                    .eq(BatchSession::getBatchId, batch.getId())
+                    .orderByAsc(BatchSession::getSessionNo));
+            for (BatchSession session : sessions) {
+                Map<String, Object> row = new HashMap<>();
+                row.put("selectionId", selection.getId());
+                row.put("courseName", course == null ? "" : course.getName());
+                row.put("courseCode", course == null ? "" : course.getCourseCode());
+                row.put("batchNo", batch.getBatchNo());
+                row.put("batchStatus", batch.getStatus());
+                row.put("classroomName", classroom == null ? "" : classroom.getName());
+                row.put("teacherNames", teachers);
+                row.put("sessionNo", session.getSessionNo());
+                row.put("startTime", session.getStartTime().toString());
+                row.put("endTime", session.getEndTime().toString());
+                row.put("selectTime", selection.getSelectTime().toString());
+                rows.add(row);
+            }
+        }
+        rows.sort((a, b) -> ((String) a.get("startTime")).compareTo((String) b.get("startTime")));
         return Result.ok(rows);
     }
 
@@ -192,6 +198,9 @@ public class StudentController {
             vo.setClassroomLocation(classroom.getLocation());
         }
         vo.setTeacherNames(teacherNames(batch.getId()));
+        vo.setSessions(batchSessionMapper.selectList(new LambdaQueryWrapper<BatchSession>()
+                .eq(BatchSession::getBatchId, batch.getId())
+                .orderByAsc(BatchSession::getSessionNo)));
         vo.setRemaining(batch.getCapacity() - batch.getSelectedCount());
         return vo;
     }

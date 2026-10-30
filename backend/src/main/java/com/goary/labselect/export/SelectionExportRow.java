@@ -1,6 +1,8 @@
 package com.goary.labselect.export;
 
 import com.alibaba.excel.annotation.ExcelProperty;
+import com.alibaba.excel.annotation.write.style.ContentStyle;
+import com.alibaba.excel.enums.BooleanEnum;
 import lombok.Data;
 
 @Data
@@ -28,6 +30,7 @@ public class SelectionExportRow {
     private String classroomName;
 
     @ExcelProperty("上课时间")
+    @ContentStyle(wrapped = BooleanEnum.TRUE)
     private String timeRange;
 
     @ExcelProperty("选课时间")

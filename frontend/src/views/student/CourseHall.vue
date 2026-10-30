@@ -11,13 +11,26 @@
       </template>
       <p v-if="c.description" class="desc">{{ c.description }}</p>
       <el-table :data="c.batches" stripe>
+        <el-table-column type="expand">
+          <template #default="{ row }">
+            <div class="session-expand">
+              <div v-for="session in row.sessions" :key="session.id" class="session-line">
+                <el-tag size="small" effect="plain">第{{ session.sessionNo }}次</el-tag>
+                <span>{{ fmt(session.startTime) }} ~ {{ fmt(session.endTime).slice(11) }}</span>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="batchNo" label="批次" width="90" />
         <el-table-column prop="classroomName" label="教室" width="140" />
         <el-table-column label="授课教师" min-width="120">
           <template #default="{ row }">{{ row.teacherNames?.join('、') }}</template>
         </el-table-column>
-        <el-table-column label="上课时间" width="270">
-          <template #default="{ row }">{{ fmt(row.startTime) }} ~ {{ fmt(row.endTime).slice(11) }}</template>
+        <el-table-column label="上课课次" width="190">
+          <template #default="{ row }">
+            <div>共 {{ row.sessions?.length || 0 }} 次</div>
+            <div class="secondary">{{ fmt(row.sessions?.[0]?.startTime) }} 起</div>
+          </template>
         </el-table-column>
         <el-table-column label="剩余名额" width="100">
           <template #default="{ row }">
@@ -64,8 +77,11 @@ async function load() {
 }
 
 async function onSelect(course, batch) {
+  const times = batch.sessions
+    .map(s => `第${s.sessionNo}次：${fmt(s.startTime)} ~ ${fmt(s.endTime).slice(11)}`)
+    .join('\n')
   await ElMessageBox.confirm(
-    `确定选择「${course.courseName} - ${batch.batchNo}」吗？\n时间：${fmt(batch.startTime)}`,
+    `确定选择「${course.courseName} - ${batch.batchNo}」吗？\n选择后需参加全部课次：\n${times}`,
     '确认选课',
     { type: 'info' }
   )
@@ -83,4 +99,7 @@ onMounted(load)
 .course-name { font-size: 16px; font-weight: 600; }
 .course-code { color: #909399; font-size: 13px; }
 .desc { color: #606266; font-size: 13px; margin: 0 0 12px; }
+.secondary { margin-top: 4px; color: #909399; font-size: 12px; }
+.session-expand { padding: 4px 24px; }
+.session-line { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
 </style>
