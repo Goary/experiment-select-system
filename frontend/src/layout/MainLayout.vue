@@ -4,7 +4,7 @@
       <div class="logo">实验选课系统</div>
       <div class="user">
         <el-tag size="small" effect="plain">{{ roleText }}</el-tag>
-        <span class="name">{{ store.user?.realName }}</span>
+        <span class="name">{{ store.user?.username }}</span>
         <el-button link type="primary" @click="onLogout">退出登录</el-button>
       </div>
     </el-header>

@@ -146,8 +146,8 @@ public class BatchController {
             SysUser u = userMap.get(s.getStudentId());
             return Map.<String, Object>of(
                     "selectionId", s.getId(),
+                    "employeeNo", u == null ? "" : u.getEmployeeNo(),
                     "username", u == null ? "" : u.getUsername(),
-                    "realName", u == null ? "" : u.getRealName(),
                     "className", u == null || u.getClassName() == null ? "" : u.getClassName(),
                     "selectTime", s.getSelectTime().toString());
         }).collect(Collectors.toList());
@@ -238,7 +238,7 @@ public class BatchController {
                 .stream().map(BatchTeacher::getTeacherId).collect(Collectors.toList());
         vo.setTeacherIds(teacherIds);
         vo.setTeacherNames(teacherIds.isEmpty() ? List.of()
-                : sysUserMapper.selectBatchIds(teacherIds).stream().map(SysUser::getRealName).collect(Collectors.toList()));
+                : sysUserMapper.selectBatchIds(teacherIds).stream().map(SysUser::getUsername).collect(Collectors.toList()));
         vo.setRemaining(batch.getCapacity() - batch.getSelectedCount());
         return vo;
     }

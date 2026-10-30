@@ -28,9 +28,9 @@ public class AuthController {
     @PostMapping("/login")
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest req) {
         SysUser user = sysUserMapper.selectOne(
-                new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, req.getUsername()));
+                new LambdaQueryWrapper<SysUser>().eq(SysUser::getEmployeeNo, req.getEmployeeNo()));
         if (user == null || !passwordEncoder.matches(req.getPassword(), user.getPassword())) {
-            throw new BizException("用户名或密码错误");
+            throw new BizException("工号/学号或密码错误");
         }
         if (user.getStatus() != 1) {
             throw new BizException("账号已停用");
@@ -43,13 +43,13 @@ public class AuthController {
     public Result<LoginUser> me() {
         LoginUser login = UserContext.get();
         SysUser user = sysUserMapper.selectById(login.getId());
-        return Result.ok(new LoginUser(user.getId(), user.getUsername(), user.getRealName(), user.getRole()));
+        return Result.ok(new LoginUser(user.getId(), user.getEmployeeNo(), user.getUsername(), user.getRole()));
     }
 
     @Data
     public static class LoginRequest {
-        @NotBlank(message = "用户名不能为空")
-        private String username;
+        @NotBlank(message = "工号/学号不能为空")
+        private String employeeNo;
         @NotBlank(message = "密码不能为空")
         private String password;
     }

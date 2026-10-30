@@ -8,7 +8,7 @@ import lombok.Data;
 public class LoginUser {
 
     private Long id;
+    private String employeeNo;
     private String username;
-    private String realName;
     private String role;
 }

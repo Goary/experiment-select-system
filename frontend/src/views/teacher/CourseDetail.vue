@@ -70,7 +70,7 @@
         </el-form-item>
         <el-form-item label="授课教师" prop="teacherIds">
           <el-select v-model="form.teacherIds" multiple style="width: 100%" placeholder="可选择多名教师">
-            <el-option v-for="t in teachers" :key="t.id" :value="t.id" :label="`${t.realName}（${t.username}）`" />
+            <el-option v-for="t in teachers" :key="t.id" :value="t.id" :label="`${t.username}（${t.employeeNo}）`" />
           </el-select>
         </el-form-item>
         <el-form-item label="上课时间" prop="timeRange">
@@ -92,8 +92,8 @@
 
     <el-dialog v-model="studentDialog" :title="`选课名单 - ${currentBatch?.batchNo || ''}`" width="640px">
       <el-table :data="students" stripe max-height="420">
-        <el-table-column prop="username" label="学号" width="120" />
-        <el-table-column prop="realName" label="姓名" width="120" />
+        <el-table-column prop="employeeNo" label="工号/学号" width="120" />
+        <el-table-column prop="username" label="姓名" width="120" />
         <el-table-column prop="className" label="班级" />
         <el-table-column prop="selectTime" label="选课时间" width="180" />
       </el-table>

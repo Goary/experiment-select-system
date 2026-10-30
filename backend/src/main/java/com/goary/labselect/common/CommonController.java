@@ -26,9 +26,9 @@ public class CommonController {
         List<SysUser> teachers = sysUserMapper.selectList(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getRole, "teacher")
                 .eq(SysUser::getStatus, 1)
-                .orderByAsc(SysUser::getUsername));
+                .orderByAsc(SysUser::getEmployeeNo));
         List<Map<String, Object>> list = teachers.stream()
-                .map(t -> Map.<String, Object>of("id", t.getId(), "username", t.getUsername(), "realName", t.getRealName()))
+                .map(t -> Map.<String, Object>of("id", t.getId(), "employeeNo", t.getEmployeeNo(), "username", t.getUsername()))
                 .toList();
         return Result.ok(list);
     }

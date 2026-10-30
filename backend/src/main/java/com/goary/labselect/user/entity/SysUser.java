@@ -15,10 +15,10 @@ public class SysUser {
 
     @TableId(type = IdType.AUTO)
     private Long id;
-    private String username;
+    private String employeeNo;
     @JsonIgnore
     private String password;
-    private String realName;
+    private String username;
     private String role;
     private String className;
     private Integer status;

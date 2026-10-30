@@ -45,8 +45,8 @@ public class AdminUserController {
         LambdaQueryWrapper<SysUser> qw = new LambdaQueryWrapper<SysUser>()
                 .eq(StringUtils.hasText(role), SysUser::getRole, role)
                 .and(StringUtils.hasText(keyword), w -> w
-                        .like(SysUser::getUsername, keyword)
-                        .or().like(SysUser::getRealName, keyword))
+                        .like(SysUser::getEmployeeNo, keyword)
+                        .or().like(SysUser::getUsername, keyword))
                 .orderByDesc(SysUser::getId);
         return Result.ok(sysUserMapper.selectPage(new Page<>(page, size), qw));
     }
@@ -54,7 +54,7 @@ public class AdminUserController {
     @PostMapping
     public Result<Void> create(@Valid @RequestBody UserForm form) {
         checkRole(form.getRole());
-        checkUsernameUnique(form.getUsername(), null);
+        checkEmployeeNoUnique(form.getEmployeeNo(), null);
         SysUser user = new SysUser();
         apply(user, form);
         user.setPassword(passwordEncoder.encode(
@@ -67,7 +67,7 @@ public class AdminUserController {
     public Result<Void> update(@PathVariable Long id, @Valid @RequestBody UserForm form) {
         SysUser user = mustExist(id);
         checkRole(form.getRole());
-        checkUsernameUnique(form.getUsername(), id);
+        checkEmployeeNoUnique(form.getEmployeeNo(), id);
         apply(user, form);
         sysUserMapper.updateById(user);
         return Result.ok();
@@ -105,18 +105,18 @@ public class AdminUserController {
         }
     }
 
-    private void checkUsernameUnique(String username, Long excludeId) {
+    private void checkEmployeeNoUnique(String employeeNo, Long excludeId) {
         Long count = sysUserMapper.selectCount(new LambdaQueryWrapper<SysUser>()
-                .eq(SysUser::getUsername, username)
+                .eq(SysUser::getEmployeeNo, employeeNo)
                 .ne(excludeId != null, SysUser::getId, excludeId));
         if (count > 0) {
-            throw new BizException("用户名已存在：" + username);
+            throw new BizException("工号/学号已存在：" + employeeNo);
         }
     }
 
     private void apply(SysUser user, UserForm form) {
+        user.setEmployeeNo(form.getEmployeeNo());
         user.setUsername(form.getUsername());
-        user.setRealName(form.getRealName());
         user.setRole(form.getRole());
         user.setClassName(form.getClassName());
         user.setStatus(form.getStatus() == null ? 1 : form.getStatus());
@@ -124,10 +124,10 @@ public class AdminUserController {
 
     @Data
     public static class UserForm {
-        @NotBlank(message = "用户名不能为空")
-        private String username;
+        @NotBlank(message = "工号/学号不能为空")
+        private String employeeNo;
         @NotBlank(message = "姓名不能为空")
-        private String realName;
+        private String username;
         @NotBlank(message = "角色不能为空")
         private String role;
         private String className;

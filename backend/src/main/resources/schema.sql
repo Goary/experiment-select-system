@@ -9,16 +9,16 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS sys_user;
 CREATE TABLE sys_user (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
-    username    VARCHAR(64)  NOT NULL COMMENT '登录名（工号/学号）',
+    employee_no VARCHAR(64)  NOT NULL COMMENT '工号/学号（登录名）',
     password    VARCHAR(128) NOT NULL COMMENT 'BCrypt 加密密码',
-    real_name   VARCHAR(64)  NOT NULL COMMENT '姓名',
+    username    VARCHAR(64)  NOT NULL COMMENT '姓名',
     role        VARCHAR(16)  NOT NULL COMMENT '角色：admin/teacher/student',
     class_name  VARCHAR(64)  DEFAULT NULL COMMENT '学生所属班级',
     status      TINYINT      NOT NULL DEFAULT 1 COMMENT '1启用 0停用',
     deleted     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_username (username)
+    UNIQUE KEY uk_employee_no (employee_no)
 ) ENGINE = InnoDB COMMENT '用户表（三角色统一）';
 
 DROP TABLE IF EXISTS classroom;
@@ -97,7 +97,7 @@ CREATE TABLE course_selection (
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- 初始数据：超管账号 admin / admin123（BCrypt）
-INSERT INTO sys_user (username, password, real_name, role)
+INSERT INTO sys_user (employee_no, password, username, role)
 VALUES ('admin', '$2a$10$Licad57LDxBcx/EK3.4Ji.nSDixZQkoUb9LPRUSzJlQWZaHQPA7lq', '系统管理员', 'admin');
 
 -- 示例教室

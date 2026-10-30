@@ -119,8 +119,8 @@ public class ExportController {
             Classroom room = classroomMap.get(b.getClassroomId());
             SysUser u = userMap.get(s.getStudentId());
             SelectionExportRow row = new SelectionExportRow();
+            row.setEmployeeNo(u == null ? "" : u.getEmployeeNo());
             row.setUsername(u == null ? "" : u.getUsername());
-            row.setRealName(u == null ? "" : u.getRealName());
             row.setClassName(u == null || u.getClassName() == null ? "" : u.getClassName());
             row.setCourseCode(c == null ? "" : c.getCourseCode());
             row.setCourseName(c == null ? "" : c.getName());

@@ -3,8 +3,8 @@
     <el-card class="card">
       <h2 class="title">实验选课系统</h2>
       <el-form :model="form" :rules="rules" ref="formRef" @keyup.enter="onSubmit">
-        <el-form-item prop="username">
-          <el-input v-model="form.username" placeholder="工号 / 学号" size="large" />
+        <el-form-item prop="employeeNo">
+          <el-input v-model="form.employeeNo" placeholder="工号 / 学号" size="large" />
         </el-form-item>
         <el-form-item prop="password">
           <el-input v-model="form.password" type="password" placeholder="密码" size="large" show-password />
@@ -26,9 +26,9 @@ const router = useRouter()
 const store = useUserStore()
 const formRef = ref()
 const loading = ref(false)
-const form = reactive({ username: '', password: '' })
+const form = reactive({ employeeNo: '', password: '' })
 const rules = {
-  username: [{ required: true, message: '请输入工号/学号', trigger: 'blur' }],
+  employeeNo: [{ required: true, message: '请输入工号/学号', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 

@@ -175,7 +175,7 @@ public class StudentController {
                         new LambdaQueryWrapper<BatchTeacher>().eq(BatchTeacher::getBatchId, batchId))
                 .stream().map(BatchTeacher::getTeacherId).collect(Collectors.toList());
         return teacherIds.isEmpty() ? List.of()
-                : sysUserMapper.selectBatchIds(teacherIds).stream().map(SysUser::getRealName).collect(Collectors.toList());
+                : sysUserMapper.selectBatchIds(teacherIds).stream().map(SysUser::getUsername).collect(Collectors.toList());
     }
 
     private BatchVO toVO(CourseBatch batch) {

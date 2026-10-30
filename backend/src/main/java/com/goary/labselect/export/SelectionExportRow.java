@@ -6,11 +6,11 @@ import lombok.Data;
 @Data
 public class SelectionExportRow {
 
-    @ExcelProperty("学号")
-    private String username;
+    @ExcelProperty("工号/学号")
+    private String employeeNo;
 
     @ExcelProperty("姓名")
-    private String realName;
+    private String username;
 
     @ExcelProperty("班级")
     private String className;

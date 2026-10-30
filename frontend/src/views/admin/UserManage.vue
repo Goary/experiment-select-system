@@ -11,8 +11,8 @@
         <el-button type="primary" @click="openForm()">新增用户</el-button>
       </div>
       <el-table :data="rows" v-loading="loading" stripe>
-        <el-table-column prop="username" label="工号/学号" width="140" />
-        <el-table-column prop="realName" label="姓名" width="120" />
+        <el-table-column prop="employeeNo" label="工号/学号" width="140" />
+        <el-table-column prop="username" label="姓名" width="120" />
         <el-table-column label="角色" width="110">
           <template #default="{ row }">
             <el-tag :type="{ admin: 'danger', teacher: 'primary', student: 'success' }[row.role]" effect="plain">
@@ -45,11 +45,11 @@
 
     <el-dialog v-model="dialog" :title="form.id ? '编辑用户' : '新增用户'" width="420px">
       <el-form :model="form" :rules="formRules" ref="formRef" label-width="90px">
-        <el-form-item label="工号/学号" prop="username">
-          <el-input v-model="form.username" :disabled="!!form.id" />
+        <el-form-item label="工号/学号" prop="employeeNo">
+          <el-input v-model="form.employeeNo" :disabled="!!form.id" />
         </el-form-item>
-        <el-form-item label="姓名" prop="realName">
-          <el-input v-model="form.realName" />
+        <el-form-item label="姓名" prop="username">
+          <el-input v-model="form.username" />
         </el-form-item>
         <el-form-item label="角色" prop="role">
           <el-select v-model="form.role" style="width: 100%">
@@ -88,10 +88,10 @@ const saving = ref(false)
 const dialog = ref(false)
 const formRef = ref()
 const query = reactive({ page: 1, size: 10, role: '', keyword: '' })
-const form = reactive({ id: null, username: '', realName: '', role: 'teacher', className: '', status: 1, password: '' })
+const form = reactive({ id: null, employeeNo: '', username: '', role: 'teacher', className: '', status: 1, password: '' })
 const formRules = {
-  username: [{ required: true, message: '请输入工号/学号', trigger: 'blur' }],
-  realName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+  employeeNo: [{ required: true, message: '请输入工号/学号', trigger: 'blur' }],
+  username: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
   role: [{ required: true, message: '请选择角色', trigger: 'change' }]
 }
 
@@ -109,8 +109,8 @@ async function load(page) {
 
 function openForm(row) {
   Object.assign(form, row
-    ? { id: row.id, username: row.username, realName: row.realName, role: row.role, className: row.className, status: row.status, password: '' }
-    : { id: null, username: '', realName: '', role: 'teacher', className: '', status: 1, password: '' })
+    ? { id: row.id, employeeNo: row.employeeNo, username: row.username, role: row.role, className: row.className, status: row.status, password: '' }
+    : { id: null, employeeNo: '', username: '', role: 'teacher', className: '', status: 1, password: '' })
   dialog.value = true
 }
 
@@ -132,13 +132,13 @@ async function onSave() {
 }
 
 async function onReset(row) {
-  await ElMessageBox.confirm(`确定将「${row.realName}」的密码重置为 123456 吗？`, '重置密码', { type: 'warning' })
+  await ElMessageBox.confirm(`确定将「${row.username}」的密码重置为 123456 吗？`, '重置密码', { type: 'warning' })
   await resetPassword(row.id)
   ElMessage.success('已重置为 123456')
 }
 
 async function onDelete(row) {
-  await ElMessageBox.confirm(`确定删除用户「${row.realName}」吗？`, '删除', { type: 'warning' })
+  await ElMessageBox.confirm(`确定删除用户「${row.username}」吗？`, '删除', { type: 'warning' })
   await deleteUser(row.id)
   ElMessage.success('已删除')
   load()
