@@ -1,5 +1,7 @@
 package com.goary.labselect.classroom;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.goary.labselect.classroom.entity.Classroom;
 import com.goary.labselect.classroom.mapper.ClassroomMapper;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+@Tag(name = "超管-教室管理", description = "仅 admin")
 @RestController
 @RequestMapping("/api/admin/classrooms")
 @RequireRole("admin")
@@ -32,6 +35,7 @@ public class ClassroomController {
 
     private final ClassroomMapper classroomMapper;
 
+    @Operation(summary = "教室列表")
     @GetMapping
     public Result<List<Classroom>> list(@RequestParam(required = false) String keyword) {
         return Result.ok(classroomMapper.selectList(new LambdaQueryWrapper<Classroom>()
@@ -39,6 +43,7 @@ public class ClassroomController {
                 .orderByAsc(Classroom::getId)));
     }
 
+    @Operation(summary = "新增教室")
     @PostMapping
     public Result<Void> create(@Valid @RequestBody ClassroomForm form) {
         Classroom classroom = new Classroom();
@@ -47,6 +52,7 @@ public class ClassroomController {
         return Result.ok();
     }
 
+    @Operation(summary = "编辑教室")
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @Valid @RequestBody ClassroomForm form) {
         Classroom classroom = classroomMapper.selectById(id);
@@ -58,6 +64,7 @@ public class ClassroomController {
         return Result.ok();
     }
 
+    @Operation(summary = "删除教室")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         classroomMapper.deleteById(id);

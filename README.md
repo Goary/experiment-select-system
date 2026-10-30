@@ -44,6 +44,11 @@ sudo systemctl stop mysql     # 停止
 cd backend && mvn spring-boot:run
 ```
 
+启动后接口文档（Swagger UI）：http://localhost:8080/swagger-ui/index.html
+先在「认证 /api/auth/login」获取 token，点右上角 Authorize 填入即可在线调试。
+
+> 约定：新增接口必须加 `@Tag`（类级）与 `@Operation(summary = "...")`（方法级）注解。
+
 ### 前端
 
 ```bash

@@ -1,5 +1,7 @@
 package com.goary.labselect.selection;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.goary.labselect.auth.UserContext;
 import com.goary.labselect.batch.BatchVO;
@@ -31,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Tag(name = "学生-选课", description = "仅 student")
 @RestController
 @RequestMapping("/api/student")
 @RequireRole("student")
@@ -44,6 +47,7 @@ public class StudentController {
     private final SysUserMapper sysUserMapper;
     private final CourseSelectionMapper selectionMapper;
 
+    @Operation(summary = "开放选课的课程与批次")
     @GetMapping("/courses/open")
     public Result<List<Map<String, Object>>> openCourses() {
         List<CourseBatch> openBatches = batchMapper.selectList(new LambdaQueryWrapper<CourseBatch>()
@@ -137,6 +141,7 @@ public class StudentController {
         return Result.ok();
     }
 
+    @Operation(summary = "我的课表")
     @GetMapping("/schedule")
     public Result<List<Map<String, Object>>> schedule() {
         List<CourseSelection> mine = selectionMapper.selectList(new LambdaQueryWrapper<CourseSelection>()

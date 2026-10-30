@@ -1,5 +1,7 @@
 package com.goary.labselect.batch;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.goary.labselect.auth.UserContext;
 import com.goary.labselect.batch.entity.BatchTeacher;
@@ -38,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Tag(name = "教师-批次管理", description = "仅 teacher")
 @RestController
 @RequestMapping("/api")
 @RequireRole("teacher")
@@ -51,6 +54,7 @@ public class BatchController {
     private final SysUserMapper sysUserMapper;
     private final CourseSelectionMapper selectionMapper;
 
+    @Operation(summary = "课程下的批次列表")
     @GetMapping("/courses/{courseId}/batches")
     public Result<List<BatchVO>> listByCourse(@PathVariable Long courseId) {
         List<CourseBatch> batches = batchMapper.selectList(new LambdaQueryWrapper<CourseBatch>()
@@ -59,6 +63,7 @@ public class BatchController {
         return Result.ok(batches.stream().map(this::toVO).collect(Collectors.toList()));
     }
 
+    @Operation(summary = "创建批次（容量取教室容量）")
     @PostMapping("/batches")
     public Result<Void> create(@Valid @RequestBody BatchForm form) {
         Course course = mustOwnCourse(form.getCourseId());
@@ -76,6 +81,7 @@ public class BatchController {
         return Result.ok();
     }
 
+    @Operation(summary = "编辑批次（仅草稿）")
     @PutMapping("/batches/{id}")
     public Result<Void> update(@PathVariable Long id, @Valid @RequestBody BatchForm form) {
         CourseBatch batch = mustOwnBatch(id);
@@ -89,6 +95,7 @@ public class BatchController {
         return Result.ok();
     }
 
+    @Operation(summary = "发布批次")
     @PostMapping("/batches/{id}/publish")
     public Result<Void> publish(@PathVariable Long id) {
         CourseBatch batch = mustOwnBatch(id);
@@ -100,6 +107,7 @@ public class BatchController {
         return Result.ok();
     }
 
+    @Operation(summary = "开放选课")
     @PostMapping("/batches/{id}/open")
     public Result<Void> open(@PathVariable Long id) {
         CourseBatch batch = mustOwnBatch(id);
@@ -111,6 +119,7 @@ public class BatchController {
         return Result.ok();
     }
 
+    @Operation(summary = "关闭选课")
     @PostMapping("/batches/{id}/close")
     public Result<Void> close(@PathVariable Long id) {
         CourseBatch batch = mustOwnBatch(id);
@@ -120,6 +129,7 @@ public class BatchController {
         return Result.ok();
     }
 
+    @Operation(summary = "删除批次（仅草稿）")
     @DeleteMapping("/batches/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         CourseBatch batch = mustOwnBatch(id);
@@ -131,6 +141,7 @@ public class BatchController {
         return Result.ok();
     }
 
+    @Operation(summary = "批次选课名单")
     @GetMapping("/batches/{id}/students")
     public Result<List<Map<String, Object>>> students(@PathVariable Long id) {
         mustOwnBatch(id);

@@ -1,5 +1,7 @@
 package com.goary.labselect.export;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.goary.labselect.auth.UserContext;
@@ -32,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Tag(name = "教师-导出", description = "仅 teacher")
 @RestController
 @RequestMapping("/api/export")
 @RequireRole("teacher")
@@ -51,6 +54,7 @@ public class ExportController {
      * by=teacher：导出当前教师授课的所有批次学生名单
      * by=batch&batchId=N：导出指定批次（实验+批次+教室维度）学生名单
      */
+    @Operation(summary = "导出选课名单 Excel（by=teacher / by=batch&batchId）")
     @GetMapping("/selections")
     public void export(@RequestParam String by,
                        @RequestParam(required = false) Long batchId,

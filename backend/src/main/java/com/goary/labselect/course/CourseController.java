@@ -1,5 +1,7 @@
 package com.goary.labselect.course;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.goary.labselect.auth.UserContext;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 
+@Tag(name = "教师-课程管理", description = "仅 teacher")
 @RestController
 @RequestMapping("/api/courses")
 @RequireRole("teacher")
@@ -33,6 +36,7 @@ public class CourseController {
 
     private final CourseMapper courseMapper;
 
+    @Operation(summary = "我创建的课程分页")
     @GetMapping("/my")
     public Result<Page<Course>> my(@RequestParam(defaultValue = "1") long page,
                                    @RequestParam(defaultValue = "10") long size,
@@ -44,11 +48,13 @@ public class CourseController {
         return Result.ok(courseMapper.selectPage(new Page<>(page, size), qw));
     }
 
+    @Operation(summary = "课程详情")
     @GetMapping("/{id}")
     public Result<Course> detail(@PathVariable Long id) {
         return Result.ok(mustOwn(id));
     }
 
+    @Operation(summary = "创建课程")
     @PostMapping
     public Result<Void> create(@Valid @RequestBody CourseForm form) {
         checkCodeUnique(form.getCourseCode(), null);
@@ -60,6 +66,7 @@ public class CourseController {
         return Result.ok();
     }
 
+    @Operation(summary = "编辑课程（仅草稿）")
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @Valid @RequestBody CourseForm form) {
         Course course = mustOwn(id);
@@ -72,6 +79,7 @@ public class CourseController {
         return Result.ok();
     }
 
+    @Operation(summary = "发布课程")
     @PostMapping("/{id}/publish")
     public Result<Void> publish(@PathVariable Long id) {
         Course course = mustOwn(id);
@@ -83,6 +91,7 @@ public class CourseController {
         return Result.ok();
     }
 
+    @Operation(summary = "删除课程（仅草稿）")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         Course course = mustOwn(id);

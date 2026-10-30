@@ -1,5 +1,7 @@
 package com.goary.labselect.auth;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.goary.labselect.common.BizException;
 import com.goary.labselect.common.Result;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "认证", description = "登录与当前用户")
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -25,6 +28,7 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
+    @Operation(summary = "登录，返回 JWT token 与用户信息")
     @PostMapping("/login")
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest req) {
         SysUser user = sysUserMapper.selectOne(
@@ -39,6 +43,7 @@ public class AuthController {
         return Result.ok(new LoginResponse(token, user));
     }
 
+    @Operation(summary = "获取当前登录用户信息")
     @GetMapping("/me")
     public Result<LoginUser> me() {
         LoginUser login = UserContext.get();

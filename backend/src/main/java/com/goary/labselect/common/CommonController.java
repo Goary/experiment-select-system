@@ -1,5 +1,7 @@
 package com.goary.labselect.common;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.goary.labselect.classroom.entity.Classroom;
 import com.goary.labselect.classroom.mapper.ClassroomMapper;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "公共数据", description = "所有登录用户可用")
 @RestController
 @RequestMapping("/api/common")
 @RequiredArgsConstructor
@@ -21,6 +24,7 @@ public class CommonController {
     private final SysUserMapper sysUserMapper;
     private final ClassroomMapper classroomMapper;
 
+    @Operation(summary = "教师下拉列表")
     @GetMapping("/teachers")
     public Result<List<Map<String, Object>>> teachers() {
         List<SysUser> teachers = sysUserMapper.selectList(new LambdaQueryWrapper<SysUser>()
@@ -33,6 +37,7 @@ public class CommonController {
         return Result.ok(list);
     }
 
+    @Operation(summary = "可用教室下拉列表")
     @GetMapping("/classrooms")
     public Result<List<Classroom>> classrooms() {
         return Result.ok(classroomMapper.selectList(new LambdaQueryWrapper<Classroom>()
